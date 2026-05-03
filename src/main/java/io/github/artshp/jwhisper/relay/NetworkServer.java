@@ -1,5 +1,6 @@
 package io.github.artshp.jwhisper.relay;
 
+import io.github.artshp.jwhisper.common.crypto.SecurityUtils;
 import io.github.artshp.jwhisper.common.protocol.MessageTransport;
 import lombok.extern.slf4j.Slf4j;
 
@@ -13,8 +14,6 @@ import java.util.concurrent.Executors;
 @Slf4j
 public class NetworkServer implements AutoCloseable {
 
-    private static final String TLS_PROTOCOL = "TLSv1.3";
-
     private final MessageTransport transport = new MessageTransport();
     private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -24,7 +23,7 @@ public class NetworkServer implements AutoCloseable {
 
     private static SSLContext getSSLContext(KeyManagerFactory keyManagerFactory) {
         try {
-            SSLContext sslContext = SSLContext.getInstance(TLS_PROTOCOL);
+            SSLContext sslContext = SSLContext.getInstance(SecurityUtils.SSL_PROTOCOL);
             sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
 
             return sslContext;
