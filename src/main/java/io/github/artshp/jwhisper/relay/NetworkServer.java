@@ -1,6 +1,6 @@
 package io.github.artshp.jwhisper.relay;
 
-import io.github.artshp.jwhisper.protocol.MessageTransport;
+import io.github.artshp.jwhisper.common.protocol.MessageTransport;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.net.ssl.*;
