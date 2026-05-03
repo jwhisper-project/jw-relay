@@ -82,6 +82,8 @@ public class NetworkServer implements AutoCloseable {
             } catch (IOException e) {
                 log.error("Error during communication with relay", e);
             }
+
+            log.info("Closing connection from {}", socket.getInetAddress());
         }
     }
 }
