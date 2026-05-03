@@ -15,6 +15,7 @@ import java.util.Optional;
 class ServerApp {
 
     private final Console console;
+    private final ConfigManager configManager = new ConfigManager();
 
     /**
      * Constructs a new server application.
@@ -42,11 +43,29 @@ class ServerApp {
 
         KeyManagerFactory keyManagerFactory = IdentityManager.getKeyManagerFactory(password.get());
 
-        try (NetworkServer server = new NetworkServer(keyManagerFactory, 8443)) {
+        ServerConfig config;
+        if (!configManager.isConfigPresent()) {
+            log.debug("No config present. Creating it...");
+
+            int port = readPort();
+
+            config = new ServerConfig(port);
+            configManager.saveConfig(config);
+        } else {
+            log.debug("Config present. Loading it...");
+            config = configManager.loadConfig();
+        }
+
+        try (NetworkServer server = new NetworkServer(keyManagerFactory, config.port())) {
             server.start();
         } catch (IOException e) {
             log.error("Failed to close network server.", e);
         }
+    }
+
+    private int readPort() {
+        String portString = console.readLine("Enter port: ");
+        return portString.isEmpty() ? 8080 : Integer.parseInt(portString);
     }
 
     private static boolean isPasswordValid(char[] password) {
