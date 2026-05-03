@@ -1,6 +1,6 @@
 package io.github.artshp.jwhisper.relay;
 
-import io.github.artshp.jwhisper.relay.exception.ConfigFileException;
+import io.github.artshp.jwhisper.common.exception.ConfigFileException;
 import lombok.extern.slf4j.Slf4j;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;

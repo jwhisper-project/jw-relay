@@ -1,6 +1,6 @@
 package io.github.artshp.jwhisper.relay;
 
-import io.github.artshp.jwhisper.relay.exception.WrongPasswordException;
+import io.github.artshp.jwhisper.common.exception.WrongPasswordException;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.net.ssl.KeyManagerFactory;
