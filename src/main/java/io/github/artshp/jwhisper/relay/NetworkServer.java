@@ -89,18 +89,16 @@ public class NetworkServer implements AutoCloseable {
             try (SSLSocket socket = this.socket) {
                 log.info("Accepted connection from {}", socket.getInetAddress());
 
-                WhisperMessage response = receive();
-                try {
-                    if (response instanceof RegisterRequest request) {
-                        processRegisterRequest(request);
+                while (true) {
+                    WhisperMessage response = receive();
+                    try {
+                        switch (response) {
+                            case RegisterRequest request -> processRegisterRequest(request);
+                            default -> throw new NetworkServiceException("Unexpected response: " + response);
+                        }
+                    } catch (NetworkServiceException e) {
+                        log.error("Failed to process request", e);
                     }
-
-                    switch (response) {
-                        case RegisterRequest request -> processRegisterRequest(request);
-                        default -> throw new NetworkServiceException("Unexpected response: " + response);
-                    }
-                } catch (NetworkServiceException e) {
-                    log.error("Failed to process request", e);
                 }
             } catch (IOException e) {
                 log.error("Error during communication with relay", e);
