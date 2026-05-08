@@ -2,6 +2,7 @@ package io.github.artshp.jwhisper.relay.storage;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.net.Socket;
 import java.security.PublicKey;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -14,12 +15,27 @@ public class UserRegistry {
      */
     private final Map<String, PublicKey> users = new ConcurrentHashMap<>();
 
+    /**
+     * Map of sockets to their usernames
+     */
+    private final Map<Socket, String> sockets = new ConcurrentHashMap<>();
+
     public boolean isUsernameTaken(String username) {
-        return users.containsKey(username.toLowerCase());
+        return users.containsKey(username);
     }
 
-    public void register(String username, PublicKey publicKey) {
-        users.put(username.toLowerCase(), publicKey);
+    public void register(Socket socket, String username, PublicKey publicKey) {
+        users.put(username, publicKey);
+        sockets.put(socket, username);
         log.info("User {} registered successfully", username);
+    }
+
+    public void unregister(Socket socket) {
+        String username = sockets.get(socket);
+        if (username != null) {
+            users.remove(username);
+            sockets.remove(socket);
+            log.info("User {} unregistered successfully", username);
+        }
     }
 }

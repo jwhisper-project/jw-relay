@@ -3,10 +3,7 @@ package io.github.artshp.jwhisper.relay;
 import io.github.artshp.jwhisper.common.crypto.SecurityUtils;
 import io.github.artshp.jwhisper.common.crypto.SigningUtils;
 import io.github.artshp.jwhisper.common.exception.NetworkServiceException;
-import io.github.artshp.jwhisper.common.protocol.MessageTransport;
-import io.github.artshp.jwhisper.common.protocol.RegisterRequest;
-import io.github.artshp.jwhisper.common.protocol.StatusResponse;
-import io.github.artshp.jwhisper.common.protocol.WhisperMessage;
+import io.github.artshp.jwhisper.common.protocol.*;
 import io.github.artshp.jwhisper.relay.storage.UserRegistry;
 import lombok.extern.slf4j.Slf4j;
 
@@ -89,11 +86,16 @@ public class NetworkServer implements AutoCloseable {
             try (SSLSocket socket = this.socket) {
                 log.info("Accepted connection from {}", socket.getInetAddress());
 
-                while (true) {
+                boolean isRunning = true;
+                while (isRunning) {
                     WhisperMessage response = receive();
                     try {
                         switch (response) {
                             case RegisterRequest request -> processRegisterRequest(request);
+                            case UnregisterRequest _ -> {
+                                processUnregisterRequest();
+                                isRunning = false;
+                            }
                             default -> throw new NetworkServiceException("Unexpected response: " + response);
                         }
                     } catch (NetworkServiceException e) {
@@ -130,10 +132,15 @@ public class NetworkServer implements AutoCloseable {
                 if (userRegistry.isUsernameTaken(username)) {
                     send(new StatusResponse(false, "Username already taken"));
                 } else {
-                    userRegistry.register(username, publicKey);
+                    userRegistry.register(socket, username, publicKey);
                     send(new StatusResponse(true, "Registered successfully"));
                 }
             }
+        }
+
+        private void processUnregisterRequest() throws IOException {
+            userRegistry.unregister(socket);
+            send(new StatusResponse(true, "Unregistered successfully"));
         }
 
         public void send(WhisperMessage message) throws IOException {
