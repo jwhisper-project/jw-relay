@@ -7,6 +7,7 @@ import io.github.artshp.jwhisper.common.protocol.MessageTransport;
 import io.github.artshp.jwhisper.common.protocol.RegisterRequest;
 import io.github.artshp.jwhisper.common.protocol.StatusResponse;
 import io.github.artshp.jwhisper.common.protocol.WhisperMessage;
+import io.github.artshp.jwhisper.relay.storage.UserRegistry;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.net.ssl.*;
@@ -22,6 +23,7 @@ import java.util.concurrent.Executors;
 @Slf4j
 public class NetworkServer implements AutoCloseable {
 
+    private final UserRegistry userRegistry = new UserRegistry();
     private final MessageTransport transport = new MessageTransport();
     private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -60,7 +62,7 @@ public class NetworkServer implements AutoCloseable {
         log.info("Starting Relay Server on {}:{}", serverSocket.getInetAddress(), serverSocket.getLocalPort());
         while (true) {
             try {
-                executorService.submit(new Servant((SSLSocket) serverSocket.accept(), transport));
+                executorService.submit(new Servant((SSLSocket) serverSocket.accept()));
             } catch (IOException e) {
                 log.error("Failed to accept or close a connection", e);
             }
@@ -74,14 +76,12 @@ public class NetworkServer implements AutoCloseable {
         }
     }
 
-    private static class Servant implements Runnable {
+    private class Servant implements Runnable {
 
         private final SSLSocket socket;
-        private final MessageTransport transport;
 
-        public Servant(SSLSocket socket, MessageTransport transport) {
+        public Servant(SSLSocket socket) {
             this.socket = socket;
-            this.transport = transport;
         }
 
         @Override
@@ -116,18 +116,23 @@ public class NetworkServer implements AutoCloseable {
                 throw new NetworkServiceException("Failed to generate public key.", e);
             }
 
+            String username = request.username();
             boolean valid = SigningUtils.verify(
                     publicKey,
-                    request.username().getBytes(),
+                    username.getBytes(),
                     request.usernameSignature()
             );
 
-            // TODO: replace with real logic
             if (!valid) {
-                log.error("Failed to verify public key");
+                log.error("Failed to verify public key. Registration failed.");
+                send(new StatusResponse(false, "Registration failed"));
             } else {
-                StatusResponse statusResponse = new StatusResponse(true, "Registered successfully");
-                send(statusResponse);
+                if (userRegistry.isUsernameTaken(username)) {
+                    send(new StatusResponse(false, "Username already taken"));
+                } else {
+                    userRegistry.register(username, publicKey);
+                    send(new StatusResponse(true, "Registered successfully"));
+                }
             }
         }
 
