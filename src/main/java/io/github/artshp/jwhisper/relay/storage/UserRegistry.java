@@ -30,12 +30,16 @@ public class UserRegistry {
         log.info("User {} registered successfully", username);
     }
 
-    public void unregister(Socket socket) {
+    public boolean unregister(Socket socket) {
         String username = sockets.get(socket);
         if (username != null) {
             users.remove(username);
             sockets.remove(socket);
             log.info("User {} unregistered successfully", username);
+            return true;
+        } else {
+            log.error("User could not be unregistered");
+            return false;
         }
     }
 }

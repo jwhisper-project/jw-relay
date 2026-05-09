@@ -141,8 +141,11 @@ public class NetworkServer implements AutoCloseable {
         }
 
         private void processUnregisterRequest() throws IOException {
-            userRegistry.unregister(socket);
-            send(new StatusResponse(true, "Unregistered successfully"));
+            if (userRegistry.unregister(socket)) {
+                send(new StatusResponse(true, "Unregistered successfully"));
+            } else {
+                send(new StatusResponse(false, "Failed to unregister user"));
+            }
         }
 
         public void send(WhisperMessage message) throws IOException {
