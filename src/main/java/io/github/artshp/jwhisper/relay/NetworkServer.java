@@ -13,7 +13,6 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -92,6 +91,7 @@ public class NetworkServer implements AutoCloseable {
                     try {
                         switch (response) {
                             case RegisterRequest request -> processRegisterRequest(request);
+                            case UserPublicKeyRequest request -> processUserPublicKeyRequest(request);
                             case UnregisterRequest _ -> {
                                 processUnregisterRequest();
                                 isRunning = false;
@@ -111,10 +111,9 @@ public class NetworkServer implements AutoCloseable {
         }
 
         private void processRegisterRequest(RegisterRequest request) throws NetworkServiceException, IOException {
-            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(request.publicKey());
             PublicKey publicKey;
             try {
-                publicKey = SecurityUtils.KEY_FACTORY.generatePublic(keySpec);
+                publicKey = SecurityUtils.newPublicKey(request.publicKey());
             } catch (InvalidKeySpecException e) {
                 throw new NetworkServiceException("Failed to generate public key.", e);
             }
@@ -137,6 +136,20 @@ public class NetworkServer implements AutoCloseable {
                     userRegistry.register(socket, username, publicKey);
                     send(new StatusResponse(true, "Registered successfully"));
                 }
+            }
+        }
+
+        private void processUserPublicKeyRequest(UserPublicKeyRequest request) throws IOException {
+            String username = request.targetUsername();
+            log.info("Received user public key request of user {}", username);
+
+            PublicKey publicKey = userRegistry.getUserPublicKey(username);
+            if (publicKey != null) {
+                log.info("Successfully found public key of user {}", username);
+                send(new UserPublicKeyResponse(username, publicKey.getEncoded(), true));
+            } else {
+                log.error("Failed to find public key of user {}", username);
+                send(new UserPublicKeyResponse(username, null, false));
             }
         }
 

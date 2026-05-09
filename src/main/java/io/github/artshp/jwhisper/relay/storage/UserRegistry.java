@@ -30,6 +30,10 @@ public class UserRegistry {
         log.info("User {} registered successfully", username);
     }
 
+    public PublicKey getUserPublicKey(String username) {
+        return users.get(username);
+    }
+
     public boolean unregister(Socket socket) {
         String username = sockets.get(socket);
         if (username != null) {
