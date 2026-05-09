@@ -106,6 +106,7 @@ public class NetworkServer implements AutoCloseable {
                 log.error("Error during communication with relay", e);
             }
 
+            LogContext.clearContext();
             log.info("Closing connection from {}", socket.getInetAddress());
         }
 
@@ -132,6 +133,7 @@ public class NetworkServer implements AutoCloseable {
                 if (userRegistry.isUsernameTaken(username)) {
                     send(new StatusResponse(false, "Username already taken"));
                 } else {
+                    LogContext.setUsername(username);
                     userRegistry.register(socket, username, publicKey);
                     send(new StatusResponse(true, "Registered successfully"));
                 }
