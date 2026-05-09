@@ -1,19 +1,26 @@
 package io.github.artshp.jwhisper.relay;
 
 import io.github.artshp.jwhisper.common.crypto.SecurityUtils;
-import io.github.artshp.jwhisper.common.protocol.MessageTransport;
+import io.github.artshp.jwhisper.common.crypto.SigningUtils;
+import io.github.artshp.jwhisper.common.exception.NetworkServiceException;
+import io.github.artshp.jwhisper.common.protocol.*;
+import io.github.artshp.jwhisper.relay.storage.UserRegistry;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.net.ssl.*;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Slf4j
 public class NetworkServer implements AutoCloseable {
 
+    private final UserRegistry userRegistry = new UserRegistry();
     private final MessageTransport transport = new MessageTransport();
     private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -78,11 +85,75 @@ public class NetworkServer implements AutoCloseable {
         public void run() {
             try (SSLSocket socket = this.socket) {
                 log.info("Accepted connection from {}", socket.getInetAddress());
+
+                boolean isRunning = true;
+                while (isRunning) {
+                    WhisperMessage response = receive();
+                    try {
+                        switch (response) {
+                            case RegisterRequest request -> processRegisterRequest(request);
+                            case UnregisterRequest _ -> {
+                                processUnregisterRequest();
+                                isRunning = false;
+                            }
+                            default -> throw new NetworkServiceException("Unexpected response: " + response);
+                        }
+                    } catch (NetworkServiceException e) {
+                        log.error("Failed to process request", e);
+                    }
+                }
             } catch (IOException e) {
                 log.error("Error during communication with relay", e);
             }
 
+            LogContext.clearContext();
             log.info("Closing connection from {}", socket.getInetAddress());
+        }
+
+        private void processRegisterRequest(RegisterRequest request) throws NetworkServiceException, IOException {
+            X509EncodedKeySpec keySpec = new X509EncodedKeySpec(request.publicKey());
+            PublicKey publicKey;
+            try {
+                publicKey = SecurityUtils.KEY_FACTORY.generatePublic(keySpec);
+            } catch (InvalidKeySpecException e) {
+                throw new NetworkServiceException("Failed to generate public key.", e);
+            }
+
+            String username = request.username();
+            boolean valid = SigningUtils.verify(
+                    publicKey,
+                    username.getBytes(),
+                    request.usernameSignature()
+            );
+
+            if (!valid) {
+                log.error("Failed to verify public key. Registration failed.");
+                send(new StatusResponse(false, "Registration failed"));
+            } else {
+                if (userRegistry.isUsernameTaken(username)) {
+                    send(new StatusResponse(false, "Username already taken"));
+                } else {
+                    LogContext.setUsername(username);
+                    userRegistry.register(socket, username, publicKey);
+                    send(new StatusResponse(true, "Registered successfully"));
+                }
+            }
+        }
+
+        private void processUnregisterRequest() throws IOException {
+            if (userRegistry.unregister(socket)) {
+                send(new StatusResponse(true, "Unregistered successfully"));
+            } else {
+                send(new StatusResponse(false, "Failed to unregister user"));
+            }
+        }
+
+        public void send(WhisperMessage message) throws IOException {
+            transport.sendMessage(socket.getOutputStream(), message);
+        }
+
+        public WhisperMessage receive() throws IOException {
+            return transport.receiveMessage(socket.getInputStream(), WhisperMessage.class);
         }
     }
 }
