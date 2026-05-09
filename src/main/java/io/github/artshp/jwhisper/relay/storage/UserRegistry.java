@@ -20,6 +20,11 @@ public class UserRegistry {
      */
     private final Map<Socket, String> sockets = new ConcurrentHashMap<>();
 
+    /**
+     * Map of usernames to their sockets
+     */
+    private final Map<String, Socket> sockets2 = new ConcurrentHashMap<>();
+
     public boolean isUsernameTaken(String username) {
         return users.containsKey(username);
     }
@@ -27,6 +32,7 @@ public class UserRegistry {
     public void register(Socket socket, String username, PublicKey publicKey) {
         users.put(username, publicKey);
         sockets.put(socket, username);
+        sockets2.put(username, socket);
         log.info("User {} registered successfully", username);
     }
 
@@ -34,11 +40,16 @@ public class UserRegistry {
         return users.get(username);
     }
 
+    public Socket getSocket(String username) {
+        return sockets2.get(username);
+    }
+
     public boolean unregister(Socket socket) {
         String username = sockets.get(socket);
         if (username != null) {
             users.remove(username);
             sockets.remove(socket);
+            sockets2.remove(username);
             log.info("User {} unregistered successfully", username);
             return true;
         } else {

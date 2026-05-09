@@ -9,10 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.net.ssl.*;
 import java.io.IOException;
+import java.net.Socket;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -22,6 +25,7 @@ public class NetworkServer implements AutoCloseable {
     private final UserRegistry userRegistry = new UserRegistry();
     private final MessageTransport transport = new MessageTransport();
     private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
+    private final Map<Socket, Servant> users = new ConcurrentHashMap<>();
 
     private final SSLServerSocketFactory serverSocketFactory;
     private final SSLServerSocket serverSocket;
@@ -92,6 +96,7 @@ public class NetworkServer implements AutoCloseable {
                         switch (response) {
                             case RegisterRequest request -> processRegisterRequest(request);
                             case UserPublicKeyRequest request -> processUserPublicKeyRequest(request);
+                            case EncryptedMessage message -> routeMessage(message);
                             case UnregisterRequest _ -> {
                                 processUnregisterRequest();
                                 isRunning = false;
@@ -134,6 +139,7 @@ public class NetworkServer implements AutoCloseable {
                 } else {
                     LogContext.setUsername(username);
                     userRegistry.register(socket, username, publicKey);
+                    users.put(socket, this);
                     send(new StatusResponse(true, "Registered successfully"));
                 }
             }
@@ -153,19 +159,34 @@ public class NetworkServer implements AutoCloseable {
             }
         }
 
+        private void routeMessage(EncryptedMessage encryptedMessage) throws IOException {
+            String recipient = encryptedMessage.recipient();
+            log.info("Received encrypted message addressed to {}", recipient);
+
+            Socket recipientSocket = userRegistry.getSocket(recipient);
+            if (recipientSocket != null) {
+                log.info("Sending message to {}", recipient);
+                Servant recipientServant = users.get(recipientSocket);
+                recipientServant.send(encryptedMessage);
+            } else {
+                log.error("Failed to send encrypted message to {}", recipient);
+            }
+        }
+
         private void processUnregisterRequest() throws IOException {
             if (userRegistry.unregister(socket)) {
+                users.remove(socket);
                 send(new StatusResponse(true, "Unregistered successfully"));
             } else {
                 send(new StatusResponse(false, "Failed to unregister user"));
             }
         }
 
-        public void send(WhisperMessage message) throws IOException {
+        public synchronized void send(WhisperMessage message) throws IOException {
             transport.sendMessage(socket.getOutputStream(), message);
         }
 
-        public WhisperMessage receive() throws IOException {
+        public synchronized WhisperMessage receive() throws IOException {
             return transport.receiveMessage(socket.getInputStream(), WhisperMessage.class);
         }
     }
