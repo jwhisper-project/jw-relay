@@ -82,6 +82,8 @@ public class NetworkServer implements AutoCloseable {
         private final Object sendLock = new Object();
         private final Object receiveLock = new Object();
 
+        private String username = null;
+
         public Servant(SSLSocket socket) {
             this.socket = socket;
         }
@@ -125,7 +127,7 @@ public class NetworkServer implements AutoCloseable {
                 throw new NetworkServiceException("Failed to generate public key.", e);
             }
 
-            String username = request.username();
+            username = request.username();
             boolean valid = SigningUtils.verify(
                     publicKey,
                     username.getBytes(),
@@ -169,6 +171,11 @@ public class NetworkServer implements AutoCloseable {
             if (recipientSocket != null) {
                 log.info("Sending message to {}", recipient);
                 Servant recipientServant = users.get(recipientSocket);
+                recipientServant.send(new UserPublicKeyResponse(
+                        username,
+                        userRegistry.getUserPublicKey(username).getEncoded(),
+                        true
+                ));
                 recipientServant.send(encryptedMessage);
                 log.info("Sent message to {}", recipient);
             } else {
