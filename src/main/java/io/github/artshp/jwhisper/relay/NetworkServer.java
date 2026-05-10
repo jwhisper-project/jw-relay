@@ -79,6 +79,8 @@ public class NetworkServer implements AutoCloseable {
     private class Servant implements Runnable {
 
         private final SSLSocket socket;
+        private final Object sendLock = new Object();
+        private final Object receiveLock = new Object();
 
         public Servant(SSLSocket socket) {
             this.socket = socket;
@@ -168,6 +170,7 @@ public class NetworkServer implements AutoCloseable {
                 log.info("Sending message to {}", recipient);
                 Servant recipientServant = users.get(recipientSocket);
                 recipientServant.send(encryptedMessage);
+                log.info("Sent message to {}", recipient);
             } else {
                 log.error("Failed to send encrypted message to {}", recipient);
             }
@@ -182,12 +185,16 @@ public class NetworkServer implements AutoCloseable {
             }
         }
 
-        public synchronized void send(WhisperMessage message) throws IOException {
-            transport.sendMessage(socket.getOutputStream(), message);
+        public void send(WhisperMessage message) throws IOException {
+            synchronized (sendLock) {
+                transport.sendMessage(socket.getOutputStream(), message);
+            }
         }
 
-        public synchronized WhisperMessage receive() throws IOException {
-            return transport.receiveMessage(socket.getInputStream(), WhisperMessage.class);
+        public WhisperMessage receive() throws IOException {
+            synchronized (receiveLock) {
+                return transport.receiveMessage(socket.getInputStream(), WhisperMessage.class);
+            }
         }
     }
 }
