@@ -120,18 +120,25 @@ public class NetworkServer implements AutoCloseable {
         }
 
         private void processRegisterRequest(RegisterRequest request) throws NetworkServiceException, IOException {
-            PublicKey publicKey;
+            PublicKey publicSigningKey;
             try {
-                publicKey = SecurityUtils.newPublicKey(request.publicKey());
+                publicSigningKey = SecurityUtils.newSigningPublicKey(request.publicSigningKey());
+            } catch (InvalidKeySpecException e) {
+                throw new NetworkServiceException("Failed to generate public key.", e);
+            }
+
+            PublicKey publicEncryptionKey;
+            try {
+                publicEncryptionKey = SecurityUtils.newEncryptionPublicKey(request.publicEncryptionKey());
             } catch (InvalidKeySpecException e) {
                 throw new NetworkServiceException("Failed to generate public key.", e);
             }
 
             username = request.username();
             boolean valid = SigningUtils.verify(
-                    publicKey,
+                    publicSigningKey,
                     username.getBytes(),
-                    request.usernameSignature()
+                    request.ownershipSignature()
             );
 
             if (!valid) {
@@ -142,7 +149,7 @@ public class NetworkServer implements AutoCloseable {
                     send(new StatusResponse(false, "Username already taken"));
                 } else {
                     LogContext.setUsername(username);
-                    userRegistry.register(socket, username, publicKey);
+                    userRegistry.register(socket, username, publicSigningKey, publicEncryptionKey);
                     users.put(socket, this);
                     send(new StatusResponse(true, "Registered successfully"));
                 }
@@ -153,13 +160,16 @@ public class NetworkServer implements AutoCloseable {
             String username = request.targetUsername();
             log.info("Received user public key request of user {}", username);
 
-            PublicKey publicKey = userRegistry.getUserPublicKey(username);
-            if (publicKey != null) {
-                log.info("Successfully found public key of user {}", username);
-                send(new UserPublicKeyResponse(username, publicKey.getEncoded(), true));
+            PublicKey publicSigningKey = userRegistry.getUserPublicSigningKey(username);
+            if (publicSigningKey != null) {
+                log.info("Successfully found public keys of user {}", username);
+                PublicKey publicEncryptionKey = userRegistry.getUserPublicEncryptionKey(username);
+                send(new UserPublicKeyResponse(
+                        username, publicSigningKey.getEncoded(), publicEncryptionKey.getEncoded(), true
+                ));
             } else {
-                log.error("Failed to find public key of user {}", username);
-                send(new UserPublicKeyResponse(username, null, false));
+                log.error("Failed to find public keys of user {}", username);
+                send(new UserPublicKeyResponse(username, null, null, false));
             }
         }
 
@@ -173,7 +183,8 @@ public class NetworkServer implements AutoCloseable {
                 Servant recipientServant = users.get(recipientSocket);
                 recipientServant.send(new UserPublicKeyResponse(
                         username,
-                        userRegistry.getUserPublicKey(username).getEncoded(),
+                        userRegistry.getUserPublicSigningKey(username).getEncoded(),
+                        userRegistry.getUserPublicEncryptionKey(username).getEncoded(),
                         true
                 ));
                 recipientServant.send(encryptedMessage);
