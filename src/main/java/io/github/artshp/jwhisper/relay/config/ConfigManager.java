@@ -1,4 +1,4 @@
-package io.github.artshp.jwhisper.relay;
+package io.github.artshp.jwhisper.relay.config;
 
 import io.github.artshp.jwhisper.common.exception.ConfigFileException;
 import lombok.extern.slf4j.Slf4j;

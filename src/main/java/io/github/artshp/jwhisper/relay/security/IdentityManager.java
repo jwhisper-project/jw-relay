@@ -1,4 +1,4 @@
-package io.github.artshp.jwhisper.relay;
+package io.github.artshp.jwhisper.relay.security;
 
 import io.github.artshp.jwhisper.common.crypto.SecurityUtils;
 import io.github.artshp.jwhisper.common.exception.WrongPasswordException;
@@ -13,7 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 
 @Slf4j
-class IdentityManager {
+public class IdentityManager {
 
     private static final String KEYSTORE_FILE = "identity.p12";
     private static final Path KEYSTORE_FILE_PATH = Path.of(KEYSTORE_FILE);

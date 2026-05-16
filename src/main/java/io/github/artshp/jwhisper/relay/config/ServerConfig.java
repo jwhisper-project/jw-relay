@@ -1,4 +1,4 @@
-package io.github.artshp.jwhisper.relay;
+package io.github.artshp.jwhisper.relay.config;
 
 /**
  * Class representing server configuration.
