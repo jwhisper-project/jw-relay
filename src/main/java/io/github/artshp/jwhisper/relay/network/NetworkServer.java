@@ -1,9 +1,10 @@
-package io.github.artshp.jwhisper.relay;
+package io.github.artshp.jwhisper.relay.network;
 
 import io.github.artshp.jwhisper.common.crypto.SecurityUtils;
 import io.github.artshp.jwhisper.common.crypto.SigningUtils;
 import io.github.artshp.jwhisper.common.exception.NetworkServiceException;
 import io.github.artshp.jwhisper.common.protocol.*;
+import io.github.artshp.jwhisper.relay.log.LogContext;
 import io.github.artshp.jwhisper.relay.storage.UserRegistry;
 import lombok.extern.slf4j.Slf4j;
 
