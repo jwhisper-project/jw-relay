@@ -28,7 +28,6 @@ class IdentityManager {
             log.info("Trying to load existing key store from file \"{}\"", KEYSTORE_FILE_PATH);
             keyStore = SecurityUtils.createAndLoadKeyStore(password, KEYSTORE_FILE_PATH);
         } else {
-            // TODO: finish implementation
             throw new UnsupportedOperationException("Key Store is not available.");
         }
 
