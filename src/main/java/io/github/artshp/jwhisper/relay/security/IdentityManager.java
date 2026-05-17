@@ -25,7 +25,7 @@ public class IdentityManager {
     public static KeyManagerFactory getKeyManagerFactory(char[] password) throws WrongPasswordException {
         KeyStore keyStore;
         if (isKeyStoreAvailable()) {
-            log.info("Trying to load existing key store from file \"{}\"", KEYSTORE_FILE_PATH);
+            LOGGER.info("Trying to load existing key store from file \"{}\"", KEYSTORE_FILE_PATH);
             keyStore = SecurityUtils.createAndLoadKeyStore(password, KEYSTORE_FILE_PATH);
         } else {
             throw new UnsupportedOperationException("Key Store is not available.");
@@ -35,7 +35,7 @@ public class IdentityManager {
         try {
             keyManagerFactory.init(keyStore, password);
         } catch (UnrecoverableKeyException | KeyStoreException | NoSuchAlgorithmException e) {
-            log.error("Failed to initialize key manager factory", e);
+            LOGGER.error("Failed to initialize key manager factory", e);
             throw new RuntimeException("Failed to initialize key manager factory", e);
         }
 

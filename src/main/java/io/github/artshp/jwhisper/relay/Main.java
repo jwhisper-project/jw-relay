@@ -16,7 +16,7 @@ class Main {
             ServerApp app = new ServerApp();
             app.start();
         } catch (Exception e) {
-            log.error("Unexpected error:", e);
+            LOGGER.error("Unexpected error:", e);
         }
     }
 }

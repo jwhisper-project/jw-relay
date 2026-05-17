@@ -39,7 +39,7 @@ public class UserRegistry {
         userPublicEncryptionKeys.put(username, publicEncryptionKey);
         sockets.put(socket, username);
         sockets2.put(username, socket);
-        log.info("User {} registered successfully", username);
+        LOGGER.info("User {} registered successfully", username);
     }
 
     public PublicKey getUserPublicSigningKey(String username) {
@@ -61,10 +61,10 @@ public class UserRegistry {
             userPublicEncryptionKeys.remove(username);
             sockets.remove(socket);
             sockets2.remove(username);
-            log.info("User {} unregistered successfully", username);
+            LOGGER.info("User {} unregistered successfully", username);
             return true;
         } else {
-            log.error("User could not be unregistered");
+            LOGGER.error("User could not be unregistered");
             return false;
         }
     }

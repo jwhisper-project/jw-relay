@@ -42,7 +42,7 @@ public class NetworkServer implements AutoCloseable {
 
             return sslContext;
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            log.error("Failed to initialize SSL context", e);
+            LOGGER.error("Failed to initialize SSL context", e);
             throw new RuntimeException(e);
         }
     }
@@ -51,7 +51,7 @@ public class NetworkServer implements AutoCloseable {
         try {
             return (SSLServerSocket) serverSocketFactory.createServerSocket(port);
         } catch (IOException e) {
-            log.error("Failed to create server socket", e);
+            LOGGER.error("Failed to create server socket", e);
             throw new RuntimeException(e);
         }
     }
@@ -63,13 +63,13 @@ public class NetworkServer implements AutoCloseable {
     }
 
     public void start() {
-        log.info("Starting Relay Server on {}:{}", serverSocket.getInetAddress(), serverSocket.getLocalPort());
+        LOGGER.info("Starting Relay Server on {}:{}", serverSocket.getInetAddress(), serverSocket.getLocalPort());
         while (true) {
             try {
                 currentSessionId = currentSessionId.add(BigInteger.ONE);
                 executorService.submit(new Servant((SSLSocket) serverSocket.accept()));
             } catch (IOException e) {
-                log.error("Failed to accept or close a connection", e);
+                LOGGER.error("Failed to accept or close a connection", e);
             }
         }
     }
@@ -99,7 +99,7 @@ public class NetworkServer implements AutoCloseable {
         public void run() {
             LogContext.setSessionNumber(sessionId);
             try (SSLSocket socket = this.socket) {
-                log.info("Accepted connection from {}", socket.getInetAddress());
+                LOGGER.info("Accepted connection from {}", socket.getInetAddress());
 
                 boolean isRunning = true;
                 while (isRunning) {
@@ -116,14 +116,14 @@ public class NetworkServer implements AutoCloseable {
                             default -> throw new NetworkServiceException("Unexpected response: " + response);
                         }
                     } catch (NetworkServiceException e) {
-                        log.error("Failed to process request", e);
+                        LOGGER.error("Failed to process request", e);
                     }
                 }
             } catch (IOException e) {
-                log.error("Error during communication with relay", e);
+                LOGGER.error("Error during communication with relay", e);
             }
 
-            log.info("Closing connection from {}", socket.getInetAddress());
+            LOGGER.info("Closing connection from {}", socket.getInetAddress());
             LogContext.clearContext();
         }
 
@@ -150,7 +150,7 @@ public class NetworkServer implements AutoCloseable {
             );
 
             if (!valid) {
-                log.error("Failed to verify public key. Registration failed.");
+                LOGGER.error("Failed to verify public key. Registration failed.");
                 send(new StatusResponse(false, "Registration failed"));
             } else {
                 if (userRegistry.isUsernameTaken(username)) {
@@ -166,28 +166,28 @@ public class NetworkServer implements AutoCloseable {
 
         private void processUserPublicKeyRequest(UserPublicKeyRequest request) throws IOException {
             String username = request.targetUsername();
-            log.info("Received user public key request of user {}", username);
+            LOGGER.info("Received user public key request of user {}", username);
 
             PublicKey publicSigningKey = userRegistry.getUserPublicSigningKey(username);
             if (publicSigningKey != null) {
-                log.info("Successfully found public keys of user {}", username);
+                LOGGER.info("Successfully found public keys of user {}", username);
                 PublicKey publicEncryptionKey = userRegistry.getUserPublicEncryptionKey(username);
                 send(new UserPublicKeyResponse(
                         username, publicSigningKey.getEncoded(), publicEncryptionKey.getEncoded(), true
                 ));
             } else {
-                log.error("Failed to find public keys of user {}", username);
+                LOGGER.error("Failed to find public keys of user {}", username);
                 send(new UserPublicKeyResponse(username, null, null, false));
             }
         }
 
         private void routeMessage(EncryptedMessage encryptedMessage) throws IOException {
             String recipient = encryptedMessage.recipient();
-            log.info("Received encrypted message addressed to {}", recipient);
+            LOGGER.info("Received encrypted message addressed to {}", recipient);
 
             Socket recipientSocket = userRegistry.getSocket(recipient);
             if (recipientSocket != null) {
-                log.info("Sending message to {}", recipient);
+                LOGGER.info("Sending message to {}", recipient);
                 Servant recipientServant = users.get(recipientSocket);
                 recipientServant.send(new UserPublicKeyResponse(
                         username,
@@ -196,9 +196,9 @@ public class NetworkServer implements AutoCloseable {
                         true
                 ));
                 recipientServant.send(encryptedMessage);
-                log.info("Sent message to {}", recipient);
+                LOGGER.info("Sent message to {}", recipient);
             } else {
-                log.error("Failed to send encrypted message to {}", recipient);
+                LOGGER.error("Failed to send encrypted message to {}", recipient);
             }
         }
 
