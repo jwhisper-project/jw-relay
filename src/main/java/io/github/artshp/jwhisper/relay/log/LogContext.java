@@ -18,6 +18,9 @@ public final class LogContext {
      */
     private static final String SESSION_ID = "sessionId";
 
+    /**
+     * Constructor to prohibit instantiating.
+     */
     private LogContext() {
         throw new UnsupportedOperationException("This is a utility class and cannot be instantiated");
     }
