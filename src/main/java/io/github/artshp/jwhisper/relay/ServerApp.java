@@ -30,6 +30,7 @@ class ServerApp {
 
     /**
      * Start server application.
+     * @throws InputRetryException if user failed to provide required value
      */
     public void start() throws InputRetryException {
         LOGGER.info("Starting Relay Server");

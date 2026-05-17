@@ -8,7 +8,14 @@ import org.slf4j.MDC;
  */
 public final class LogContext {
 
+    /**
+     * Username key.
+     */
     private static final String USERNAME = "username";
+
+    /**
+     * Session id key.
+     */
     private static final String SESSION_ID = "sessionId";
 
     private LogContext() {
