@@ -17,6 +17,9 @@ import java.io.IOException;
 @Slf4j
 class ServerApp {
 
+    /**
+     * Config file manager.
+     */
     private final ConfigManager configManager = new ConfigManager();
 
     /**
@@ -27,9 +30,10 @@ class ServerApp {
 
     /**
      * Start server application.
+     * @throws InputRetryException if user failed to provide required value
      */
     public void start() throws InputRetryException {
-        log.info("Starting Relay Server");
+        LOGGER.info("Starting Relay Server");
         System.out.println("----- JWhisper Relay -----");
 
         char[] password = UserInputUtils.readPassword();
@@ -37,21 +41,21 @@ class ServerApp {
 
         ServerConfig config;
         if (!configManager.isConfigPresent()) {
-            log.debug("No config present. Creating it...");
+            LOGGER.debug("No config present. Creating it...");
 
             int port = UserInputUtils.readPort();
 
             config = new ServerConfig(port);
             configManager.saveConfig(config);
         } else {
-            log.debug("Config present. Loading it...");
+            LOGGER.debug("Config present. Loading it...");
             config = configManager.loadConfig();
         }
 
         try (NetworkServer server = new NetworkServer(keyManagerFactory, config.port())) {
             server.start();
         } catch (IOException e) {
-            log.error("Failed to close network server.", e);
+            LOGGER.error("Failed to close network server.", e);
         }
     }
 }
