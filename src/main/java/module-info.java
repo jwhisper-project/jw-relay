@@ -1,3 +1,6 @@
+/**
+ * JWhisper relay server.
+ */
 module jwhisper.relay {
     requires static lombok;
 
