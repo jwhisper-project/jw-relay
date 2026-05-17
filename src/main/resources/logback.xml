@@ -2,7 +2,7 @@
 <configuration>
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%cyan(%thread)] [%magenta(%X{username:-system})] - %msg%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%cyan(%thread)] %replace([SID: %green(%X{sessionId})] ){'^\[SID: (\x1B\[[0-9;]*m)*\] $', ''}%replace([%magenta(%X{username})] ){'^\[(\x1B\[[0-9;]*m)*\] $', ''}- %msg%n</pattern>
         </encoder>
     </appender>
 
