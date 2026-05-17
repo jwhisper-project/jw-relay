@@ -17,6 +17,9 @@ import java.io.IOException;
 @Slf4j
 class ServerApp {
 
+    /**
+     * Config file manager.
+     */
     private final ConfigManager configManager = new ConfigManager();
 
     /**
