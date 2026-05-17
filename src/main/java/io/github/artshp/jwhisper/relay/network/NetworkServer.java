@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import javax.net.ssl.*;
 import java.io.IOException;
+import java.math.BigInteger;
 import java.net.Socket;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -31,6 +32,8 @@ public class NetworkServer implements AutoCloseable {
     private final SSLServerSocketFactory serverSocketFactory;
     private final SSLServerSocket serverSocket;
     private final int port;
+
+    private BigInteger currentSessionId = BigInteger.ZERO;
 
     private static SSLContext getSSLContext(KeyManagerFactory keyManagerFactory) {
         try {
@@ -63,6 +66,7 @@ public class NetworkServer implements AutoCloseable {
         log.info("Starting Relay Server on {}:{}", serverSocket.getInetAddress(), serverSocket.getLocalPort());
         while (true) {
             try {
+                currentSessionId = currentSessionId.add(BigInteger.ONE);
                 executorService.submit(new Servant((SSLSocket) serverSocket.accept()));
             } catch (IOException e) {
                 log.error("Failed to accept or close a connection", e);
@@ -80,6 +84,7 @@ public class NetworkServer implements AutoCloseable {
     private class Servant implements Runnable {
 
         private final SSLSocket socket;
+        private final String sessionId;
         private final Object sendLock = new Object();
         private final Object receiveLock = new Object();
 
@@ -87,10 +92,12 @@ public class NetworkServer implements AutoCloseable {
 
         public Servant(SSLSocket socket) {
             this.socket = socket;
+            this.sessionId = currentSessionId.toString();
         }
 
         @Override
         public void run() {
+            LogContext.setSessionNumber(sessionId);
             try (SSLSocket socket = this.socket) {
                 log.info("Accepted connection from {}", socket.getInetAddress());
 
@@ -116,8 +123,8 @@ public class NetworkServer implements AutoCloseable {
                 log.error("Error during communication with relay", e);
             }
 
-            LogContext.clearContext();
             log.info("Closing connection from {}", socket.getInetAddress());
+            LogContext.clearContext();
         }
 
         private void processRegisterRequest(RegisterRequest request) throws NetworkServiceException, IOException {

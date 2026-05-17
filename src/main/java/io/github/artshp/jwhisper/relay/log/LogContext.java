@@ -8,6 +8,10 @@ public class LogContext {
         MDC.put("username", username);
     }
 
+    public static void setSessionNumber(String sessionId) {
+        MDC.put("sessionId", sessionId);
+    }
+
     public static void clearContext() {
         MDC.clear();
     }
