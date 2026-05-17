@@ -16,8 +16,9 @@
     </scm>
 
     <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
+        <java.version>25</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <jwhisper.relay.mainClass>io.github.artshp.jwhisper.relay.Main</jwhisper.relay.mainClass>
@@ -116,6 +117,15 @@
                 <version>3.12.0</version>
                 <configuration>
                     <show>private</show>
+                    <detectJavaApiLink>true</detectJavaApiLink>
+                    <release>${java.version}</release>
+                    <links>
+                        <link>https://docs.oracle.com/en/java/javase/${java.version}/docs/api/</link>
+                        <link>https://www.slf4j.org/apidocs-${slf4j.version}/</link>
+                        <link>https://javadoc.io/doc/tools.jackson.core/jackson-core/${jackson.version}/</link>
+                        <link>https://javadoc.io/doc/tools.jackson.core/jackson-databind/${jackson.version}/</link>
+                        <link>https://projectlombok.org/api/</link>
+                    </links>
                 </configuration>
             </plugin>
         </plugins>
