@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>JWhisper Relay Server Overview</title>
+</head>
+<body>
+<h1>JWhisper Relay Server Overview</h1>
+
+<p>
+    The <code>jw-relay</code> artifact is a lightweight, zero-knowledge switchboard server responsible for
+    managing user identities and routing end-to-end encrypted envelopes. The Relay serves strictly as an untrusted
+    courier — it exposes public keys but is cryptographically restricted from inspecting message text payloads.
+</p>
+
+<h2>Key Structural Pillars</h2>
+<ul>
+    <li><strong>io.github.artshp.jwhisper.relay.storage</strong>
+        Manages data persistence using in-memory hash table. Users need to register after
+        every server's restart.
+    </li>
+    <li><strong>io.github.artshp.jwhisper.relay.network</strong>
+        Orchestrates active sessions via thread-safe routing tables and implements concurrent
+        Virtual Thread task dispatchers capable of managing thousands of simultaneous node connections cleanly.
+    </li>
+    <li><strong>io.github.artshp.jwhisper.relay.log</strong>
+        Integrates advanced <code>Mapped Diagnostic Context (MDC)</code> trackers paired with a
+        custom Logback layout converter to contextually color-code system telemetry from user-driven streams.
+    </li>
+</ul>
+
+</body>
+</html>
