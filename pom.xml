@@ -24,7 +24,7 @@
         <jwhisper.relay.mainClass>io.github.artshp.jwhisper.relay.Main</jwhisper.relay.mainClass>
 
         <!-- Internal -->
-        <jw-common.version>1.0.0</jw-common.version>
+        <jw-common.version>2.0.0-SNAPSHOT</jw-common.version>
 
         <!-- External -->
         <slf4j.version>2.0.17</slf4j.version>

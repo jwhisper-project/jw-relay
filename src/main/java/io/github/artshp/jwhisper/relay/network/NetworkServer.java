@@ -181,7 +181,7 @@ public class NetworkServer implements AutoCloseable {
                             case RegisterRequest request -> processRegisterRequest(request);
                             case UserPublicKeyRequest request -> processUserPublicKeyRequest(request);
                             case EncryptedMessage message -> routeMessage(message);
-                            case UnregisterRequest _ -> {
+                            case LogoutRequest _ -> {
                                 processUnregisterRequest();
                                 isRunning = false;
                             }
