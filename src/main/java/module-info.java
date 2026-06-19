@@ -7,6 +7,8 @@ module jwhisper.relay {
     requires org.slf4j;
     requires tools.jackson.core;
     requires tools.jackson.databind;
+    requires spring.data.commons;
+    requires spring.data.relational;
 
     requires jwhisper.common;
 }
