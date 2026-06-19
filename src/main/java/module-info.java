@@ -9,6 +9,7 @@ module jwhisper.relay {
     requires tools.jackson.databind;
     requires spring.data.commons;
     requires spring.data.relational;
+    requires spring.context;
 
     requires jwhisper.common;
 }
