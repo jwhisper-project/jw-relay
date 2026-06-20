@@ -5,6 +5,7 @@ import io.github.artshp.jwhisper.common.crypto.SigningUtils;
 import io.github.artshp.jwhisper.common.exception.NetworkServiceException;
 import io.github.artshp.jwhisper.common.protocol.*;
 import io.github.artshp.jwhisper.relay.log.LogContext;
+import io.github.artshp.jwhisper.relay.storage.UserPublicKeys;
 import io.github.artshp.jwhisper.relay.storage.UserRegistry;
 import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -251,12 +253,12 @@ public class NetworkServer implements AutoCloseable {
             String username = request.targetUsername();
             LOGGER.info("Received user public key request of user {}", username);
 
-            PublicKey publicSigningKey = userRegistry.getUserPublicSigningKey(username);
-            if (publicSigningKey != null) {
+            Optional<UserPublicKeys> publicKeysOptional = userRegistry.getUserPublicKeys(username);
+            if (publicKeysOptional.isPresent()) {
                 LOGGER.info("Successfully found public keys of user {}", username);
-                PublicKey publicEncryptionKey = userRegistry.getUserPublicEncryptionKey(username);
+                UserPublicKeys publicKeys = publicKeysOptional.get();
                 send(new UserPublicKeyResponse(
-                        username, publicSigningKey.getEncoded(), publicEncryptionKey.getEncoded(), true
+                        username, publicKeys.signingKey(), publicKeys.encryptionKey(), true
                 ));
             } else {
                 LOGGER.error("Failed to find public keys of user {}", username);
@@ -277,14 +279,21 @@ public class NetworkServer implements AutoCloseable {
             if (recipientSocket != null) {
                 LOGGER.info("Sending message to {}", recipient);
                 Servant recipientServant = users.get(recipientSocket);
-                recipientServant.send(new UserPublicKeyResponse(
-                        username,
-                        userRegistry.getUserPublicSigningKey(username).getEncoded(),
-                        userRegistry.getUserPublicEncryptionKey(username).getEncoded(),
-                        true
-                ));
-                recipientServant.send(encryptedMessage);
-                LOGGER.info("Sent message to {}", recipient);
+
+                Optional<UserPublicKeys> publicKeysOptional = userRegistry.getUserPublicKeys(username);
+                if (publicKeysOptional.isPresent()) {
+                    UserPublicKeys publicKeys = publicKeysOptional.get();
+                    recipientServant.send(new UserPublicKeyResponse(
+                            username,
+                            publicKeys.signingKey(),
+                            publicKeys.encryptionKey(),
+                            true
+                    ));
+                    recipientServant.send(encryptedMessage);
+                    LOGGER.info("Sent message to {}", recipient);
+                } else {
+                    LOGGER.error("Failed to get public keys of {}", username);
+                }
             } else {
                 LOGGER.error("Failed to send encrypted message to {}", recipient);
             }

@@ -5,7 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.net.Socket;
 import java.security.PublicKey;
+import java.time.Instant;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -14,17 +16,10 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class UserRegistry {
 
+    /**
+     * Users database repository.
+     */
     private final UserRepository repository = SpringContextBridge.getBean(UserRepository.class);
-
-    /**
-     * Map of usernames to their public signing keys.
-     */
-    private final Map<String, PublicKey> userPublicSigningKeys = new ConcurrentHashMap<>();
-
-    /**
-     * Map of usernames to their public encryption keys.
-     */
-    private final Map<String, PublicKey> userPublicEncryptionKeys = new ConcurrentHashMap<>();
 
     /**
      * Map of sockets to their usernames.
@@ -48,7 +43,7 @@ public class UserRegistry {
      * @return {@code true} if username is taken, otherwise {@code false}
      */
     public boolean isUsernameTaken(String username) {
-        return userPublicSigningKeys.containsKey(username);
+        return repository.existsByUsername(username);
     }
 
     /**
@@ -59,29 +54,29 @@ public class UserRegistry {
      * @param publicEncryptionKey user's public encryption key
      */
     public void register(Socket socket, String username, PublicKey publicSigningKey, PublicKey publicEncryptionKey) {
-        userPublicSigningKeys.put(username, publicSigningKey);
-        userPublicEncryptionKeys.put(username, publicEncryptionKey);
+        repository.save(new UserEntity(
+                username,
+                publicSigningKey.getEncoded(),
+                publicEncryptionKey.getEncoded(),
+                Instant.now())
+        );
+
         sockets.put(socket, username);
         socketsReverse.put(username, socket);
         LOGGER.info("User {} registered successfully", username);
     }
 
     /**
-     * Get user's public signing key.
+     * Get user's public keys set (signing + encryption).
      * @param username target user username
-     * @return public signing key of target user if registered, otherwise {@code null}
+     * @return public keys of target user if registered, otherwise {@link Optional#empty()}
      */
-    public PublicKey getUserPublicSigningKey(String username) {
-        return userPublicSigningKeys.get(username);
-    }
-
-    /**
-     * Get user's public encryption key.
-     * @param username target user username
-     * @return public encryption key of target user if registered, otherwise {@code null}
-     */
-    public PublicKey getUserPublicEncryptionKey(String username) {
-        return userPublicEncryptionKeys.get(username);
+    public Optional<UserPublicKeys> getUserPublicKeys(String username) {
+        return repository.findByUsername(username)
+                .map(user -> new UserPublicKeys(
+                        user.publicSigningKey(),
+                        user.publicEncryptionKey()
+                ));
     }
 
     /**
@@ -101,8 +96,6 @@ public class UserRegistry {
     public boolean unregister(Socket socket) {
         String username = sockets.get(socket);
         if (username != null) {
-            userPublicSigningKeys.remove(username);
-            userPublicEncryptionKeys.remove(username);
             sockets.remove(socket);
             socketsReverse.remove(username);
             LOGGER.info("User {} unregistered successfully", username);
