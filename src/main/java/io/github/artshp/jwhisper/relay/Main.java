@@ -1,6 +1,7 @@
 package io.github.artshp.jwhisper.relay;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.SpringApplication;
 
 /**
  * Relay app entry point.
@@ -18,7 +19,9 @@ final class Main {
     /**
      * Relay app entry point.
      */
-    static void main() {
+    static void main(String[] args) {
+        SpringApplication.run(RelayApplication.class, args);
+
         try {
             ServerApp app = new ServerApp();
             app.start();
