@@ -33,6 +33,7 @@
         <jackson.version>3.1.2</jackson.version>
         <h2database.version>2.4.240</h2database.version>
         <spring.jdbc.version>4.1.0</spring.jdbc.version>
+        <spring.websocket.version>4.1.0</spring.websocket.version>
     </properties>
 
     <build>
@@ -187,6 +188,13 @@
             <artifactId>h2</artifactId>
             <version>${h2database.version}</version>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- Web Sockets - network communication -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+            <version>${spring.websocket.version}</version>
         </dependency>
     </dependencies>
 
