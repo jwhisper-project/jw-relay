@@ -304,7 +304,7 @@ public class NetworkServer implements AutoCloseable {
          * @throws IOException if failed to send response
          */
         private void processUnregisterRequest() throws IOException {
-            if (userRegistry.unregister(socket)) {
+            if (userRegistry.logout(socket)) {
                 users.remove(socket);
                 send(new StatusResponse(true, "Unregistered successfully"));
             } else {

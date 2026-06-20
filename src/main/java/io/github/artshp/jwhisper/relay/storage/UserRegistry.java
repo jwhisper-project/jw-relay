@@ -114,19 +114,19 @@ public class UserRegistry {
     }
 
     /**
-     * Unregister user.
+     * Log out user.
      * @param socket client socket.
-     * @return {@code true} if unregistered user successfully, otherwise {@code false}
+     * @return {@code true} if logged user out successfully, otherwise {@code false}
      */
-    public boolean unregister(Socket socket) {
+    public boolean logout(Socket socket) {
         String username = sockets.get(socket);
         if (username != null) {
             sockets.remove(socket);
             socketsReverse.remove(username);
-            LOGGER.info("User {} unregistered successfully", username);
+            LOGGER.info("User {} logged out successfully", username);
             return true;
         } else {
-            LOGGER.error("User could not be unregistered");
+            LOGGER.error("User could not be logged out");
             return false;
         }
     }
