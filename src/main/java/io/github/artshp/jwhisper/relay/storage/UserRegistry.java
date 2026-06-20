@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Users registry. Manages currently registered (logged in) users.
+ * Users registry. Manages currently registered and logged-in users.
  */
 @Slf4j
 public class UserRegistry {
