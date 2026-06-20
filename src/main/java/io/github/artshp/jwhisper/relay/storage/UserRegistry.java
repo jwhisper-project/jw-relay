@@ -1,5 +1,6 @@
 package io.github.artshp.jwhisper.relay.storage;
 
+import io.github.artshp.jwhisper.relay.util.SpringContextBridge;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.Socket;
@@ -12,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 public class UserRegistry {
+
+    private final UserRepository repository = SpringContextBridge.getBean(UserRepository.class);
 
     /**
      * Map of usernames to their public signing keys.
