@@ -4,7 +4,10 @@ import io.github.artshp.jwhisper.common.crypto.SecurityUtils;
 import io.github.artshp.jwhisper.common.crypto.SigningUtils;
 import io.github.artshp.jwhisper.common.exception.NetworkServiceException;
 import io.github.artshp.jwhisper.common.protocol.*;
+import io.github.artshp.jwhisper.relay.exception.LoginException;
+import io.github.artshp.jwhisper.relay.exception.RegistrationException;
 import io.github.artshp.jwhisper.relay.log.LogContext;
+import io.github.artshp.jwhisper.relay.storage.UserPublicKeys;
 import io.github.artshp.jwhisper.relay.storage.UserRegistry;
 import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +21,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -179,10 +183,11 @@ public class NetworkServer implements AutoCloseable {
                     try {
                         switch (response) {
                             case RegisterRequest request -> processRegisterRequest(request);
+                            case LoginRequest request -> processLoginRequest(request);
                             case UserPublicKeyRequest request -> processUserPublicKeyRequest(request);
                             case EncryptedMessage message -> routeMessage(message);
-                            case UnregisterRequest _ -> {
-                                processUnregisterRequest();
+                            case LogoutRequest _ -> {
+                                processLogoutRequest();
                                 isRunning = false;
                             }
                             default -> throw new NetworkServiceException("Unexpected response: " + response);
@@ -234,10 +239,57 @@ public class NetworkServer implements AutoCloseable {
                 if (userRegistry.isUsernameTaken(username)) {
                     send(new StatusResponse(false, "Username already taken"));
                 } else {
+                    try {
+                        userRegistry.register(username, publicSigningKey, publicEncryptionKey);
+                        send(new StatusResponse(true, "Registered successfully"));
+                    } catch (RegistrationException e) {
+                        LOGGER.error("Registration failed", e);
+                        send(new StatusResponse(false, "Registration failed due to: %s".formatted(e.getMessage())));
+                    }
+                }
+            }
+        }
+
+        /**
+         * Process incoming user login request.
+         * @param request incoming request
+         * @throws NetworkServiceException if failed to process request due to invalid request
+         * @throws IOException if failed to send response
+         */
+        private void processLoginRequest(LoginRequest request) throws NetworkServiceException, IOException {
+            Optional<UserPublicKeys> publicKeysOptional = userRegistry.getUserPublicKeys(request.username());
+            if (publicKeysOptional.isEmpty()) {
+                LOGGER.error("User {} does not exist.", request.username());
+                throw new NetworkServiceException("User does not exist.");
+            }
+
+            UserPublicKeys publicKeys = publicKeysOptional.get();
+            PublicKey publicSigningKey;
+            try {
+                publicSigningKey = SecurityUtils.newSigningPublicKey(publicKeys.signingKey());
+            } catch (InvalidKeySpecException e) {
+                throw new NetworkServiceException("Failed to generate public key.", e);
+            }
+
+            username = request.username();
+            boolean valid = SigningUtils.verify(
+                    publicSigningKey,
+                    username.getBytes(),
+                    request.ownershipSignature()
+            );
+
+            if (!valid) {
+                LOGGER.error("Failed to verify public key. Login failed.");
+                send(new StatusResponse(false, "Login failed"));
+            } else {
+                try {
+                    userRegistry.login(socket, username);
                     LogContext.setUsername(username);
-                    userRegistry.register(socket, username, publicSigningKey, publicEncryptionKey);
                     users.put(socket, this);
-                    send(new StatusResponse(true, "Registered successfully"));
+                    send(new StatusResponse(true, "Logged in successfully"));
+                } catch (LoginException e) {
+                    LOGGER.error("Login failed", e);
+                    send(new StatusResponse(false, "Login failed due to: %s".formatted(e.getMessage())));
                 }
             }
         }
@@ -251,12 +303,12 @@ public class NetworkServer implements AutoCloseable {
             String username = request.targetUsername();
             LOGGER.info("Received user public key request of user {}", username);
 
-            PublicKey publicSigningKey = userRegistry.getUserPublicSigningKey(username);
-            if (publicSigningKey != null) {
+            Optional<UserPublicKeys> publicKeysOptional = userRegistry.getUserPublicKeys(username);
+            if (publicKeysOptional.isPresent()) {
                 LOGGER.info("Successfully found public keys of user {}", username);
-                PublicKey publicEncryptionKey = userRegistry.getUserPublicEncryptionKey(username);
+                UserPublicKeys publicKeys = publicKeysOptional.get();
                 send(new UserPublicKeyResponse(
-                        username, publicSigningKey.getEncoded(), publicEncryptionKey.getEncoded(), true
+                        username, publicKeys.signingKey(), publicKeys.encryptionKey(), true
                 ));
             } else {
                 LOGGER.error("Failed to find public keys of user {}", username);
@@ -277,14 +329,21 @@ public class NetworkServer implements AutoCloseable {
             if (recipientSocket != null) {
                 LOGGER.info("Sending message to {}", recipient);
                 Servant recipientServant = users.get(recipientSocket);
-                recipientServant.send(new UserPublicKeyResponse(
-                        username,
-                        userRegistry.getUserPublicSigningKey(username).getEncoded(),
-                        userRegistry.getUserPublicEncryptionKey(username).getEncoded(),
-                        true
-                ));
-                recipientServant.send(encryptedMessage);
-                LOGGER.info("Sent message to {}", recipient);
+
+                Optional<UserPublicKeys> publicKeysOptional = userRegistry.getUserPublicKeys(username);
+                if (publicKeysOptional.isPresent()) {
+                    UserPublicKeys publicKeys = publicKeysOptional.get();
+                    recipientServant.send(new UserPublicKeyResponse(
+                            username,
+                            publicKeys.signingKey(),
+                            publicKeys.encryptionKey(),
+                            true
+                    ));
+                    recipientServant.send(encryptedMessage);
+                    LOGGER.info("Sent message to {}", recipient);
+                } else {
+                    LOGGER.error("Failed to get public keys of {}", username);
+                }
             } else {
                 LOGGER.error("Failed to send encrypted message to {}", recipient);
             }
@@ -294,12 +353,12 @@ public class NetworkServer implements AutoCloseable {
          * Process incoming user unregister request.
          * @throws IOException if failed to send response
          */
-        private void processUnregisterRequest() throws IOException {
-            if (userRegistry.unregister(socket)) {
+        private void processLogoutRequest() throws IOException {
+            if (userRegistry.logout(socket)) {
                 users.remove(socket);
-                send(new StatusResponse(true, "Unregistered successfully"));
+                send(new StatusResponse(true, "Logged out successfully"));
             } else {
-                send(new StatusResponse(false, "Failed to unregister user"));
+                send(new StatusResponse(false, "Failed to log user out"));
             }
         }
 
