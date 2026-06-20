@@ -1,5 +1,7 @@
 package io.github.artshp.jwhisper.relay.storage;
 
+import io.github.artshp.jwhisper.relay.exception.LoginException;
+import io.github.artshp.jwhisper.relay.exception.RegistrationException;
 import io.github.artshp.jwhisper.relay.util.SpringContextBridge;
 import lombok.extern.slf4j.Slf4j;
 
@@ -48,22 +50,45 @@ public class UserRegistry {
 
     /**
      * Register user.
-     * @param socket client socket.
      * @param username user's username
      * @param publicSigningKey user's public signing key
      * @param publicEncryptionKey user's public encryption key
+     * @throws RegistrationException if error occurred during persistence to database.
      */
-    public void register(Socket socket, String username, PublicKey publicSigningKey, PublicKey publicEncryptionKey) {
-        repository.save(new UserEntity(
-                username,
-                publicSigningKey.getEncoded(),
-                publicEncryptionKey.getEncoded(),
-                Instant.now())
-        );
+    public void register(String username, PublicKey publicSigningKey, PublicKey publicEncryptionKey) {
+        try {
+            repository.save(new UserEntity(
+                    username,
+                    publicSigningKey.getEncoded(),
+                    publicEncryptionKey.getEncoded(),
+                    Instant.now())
+            );
+        } catch (Exception e) {
+            LOGGER.error("Failed to register user", e);
+            throw new RegistrationException("Failed to register user", e);
+        }
+
+        LOGGER.info("User {} registered successfully", username);
+    }
+
+    /**
+     * Log in user.
+     * @param socket client socket
+     * @param username user's username
+     * @throws LoginException if username doesn't exist or user is already logged in.
+     */
+    public void login(Socket socket, String username) {
+        if (!repository.existsByUsername(username)) {
+            throw new LoginException("Username %s not found".formatted(username));
+        }
+
+        if (socketsReverse.containsKey(username)) {
+            throw new LoginException("User %s is already logged in".formatted(username));
+        }
 
         sockets.put(socket, username);
         socketsReverse.put(username, socket);
-        LOGGER.info("User {} registered successfully", username);
+        LOGGER.info("User {} logged in successfully", username);
     }
 
     /**

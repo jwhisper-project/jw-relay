@@ -237,7 +237,7 @@ public class NetworkServer implements AutoCloseable {
                     send(new StatusResponse(false, "Username already taken"));
                 } else {
                     LogContext.setUsername(username);
-                    userRegistry.register(socket, username, publicSigningKey, publicEncryptionKey);
+                    userRegistry.register(username, publicSigningKey, publicEncryptionKey);
                     users.put(socket, this);
                     send(new StatusResponse(true, "Registered successfully"));
                 }
