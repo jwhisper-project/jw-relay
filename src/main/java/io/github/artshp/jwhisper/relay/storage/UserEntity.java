@@ -5,11 +5,16 @@ import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.Instant;
 
-@Table("USERS")
+@Table("JW_USERS")
 public record UserEntity(
-        @Id String username,
+        @Id Long id,
+        String username,
         byte[] publicSigningKey,
         byte[] publicEncryptionKey,
         Instant registeredAt
 ) {
+
+    public UserEntity(String username, byte[] publicSigningKey, byte[] publicEncryptionKey, Instant registeredAt) {
+        this(null, username, publicSigningKey, publicEncryptionKey, registeredAt);
+    }
 }
