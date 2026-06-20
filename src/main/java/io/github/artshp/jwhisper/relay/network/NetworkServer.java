@@ -4,6 +4,8 @@ import io.github.artshp.jwhisper.common.crypto.SecurityUtils;
 import io.github.artshp.jwhisper.common.crypto.SigningUtils;
 import io.github.artshp.jwhisper.common.exception.NetworkServiceException;
 import io.github.artshp.jwhisper.common.protocol.*;
+import io.github.artshp.jwhisper.relay.exception.LoginException;
+import io.github.artshp.jwhisper.relay.exception.RegistrationException;
 import io.github.artshp.jwhisper.relay.log.LogContext;
 import io.github.artshp.jwhisper.relay.storage.UserPublicKeys;
 import io.github.artshp.jwhisper.relay.storage.UserRegistry;
@@ -181,6 +183,7 @@ public class NetworkServer implements AutoCloseable {
                     try {
                         switch (response) {
                             case RegisterRequest request -> processRegisterRequest(request);
+                            case LoginRequest request -> processLoginRequest(request);
                             case UserPublicKeyRequest request -> processUserPublicKeyRequest(request);
                             case EncryptedMessage message -> routeMessage(message);
                             case LogoutRequest _ -> {
@@ -236,10 +239,57 @@ public class NetworkServer implements AutoCloseable {
                 if (userRegistry.isUsernameTaken(username)) {
                     send(new StatusResponse(false, "Username already taken"));
                 } else {
+                    try {
+                        userRegistry.register(username, publicSigningKey, publicEncryptionKey);
+                        send(new StatusResponse(true, "Registered successfully"));
+                    } catch (RegistrationException e) {
+                        LOGGER.error("Registration failed", e);
+                        send(new StatusResponse(false, "Registration failed due to: %s".formatted(e.getMessage())));
+                    }
+                }
+            }
+        }
+
+        /**
+         * Process incoming user login request.
+         * @param request incoming request
+         * @throws NetworkServiceException if failed to process request due to invalid request
+         * @throws IOException if failed to send response
+         */
+        private void processLoginRequest(LoginRequest request) throws NetworkServiceException, IOException {
+            Optional<UserPublicKeys> publicKeysOptional = userRegistry.getUserPublicKeys(request.username());
+            if (publicKeysOptional.isEmpty()) {
+                LOGGER.error("User {} does not exist.", request.username());
+                throw new NetworkServiceException("User does not exist.");
+            }
+
+            UserPublicKeys publicKeys = publicKeysOptional.get();
+            PublicKey publicSigningKey;
+            try {
+                publicSigningKey = SecurityUtils.newSigningPublicKey(publicKeys.signingKey());
+            } catch (InvalidKeySpecException e) {
+                throw new NetworkServiceException("Failed to generate public key.", e);
+            }
+
+            username = request.username();
+            boolean valid = SigningUtils.verify(
+                    publicSigningKey,
+                    username.getBytes(),
+                    request.ownershipSignature()
+            );
+
+            if (!valid) {
+                LOGGER.error("Failed to verify public key. Login failed.");
+                send(new StatusResponse(false, "Login failed"));
+            } else {
+                try {
+                    userRegistry.login(socket, username);
                     LogContext.setUsername(username);
-                    userRegistry.register(username, publicSigningKey, publicEncryptionKey);
                     users.put(socket, this);
-                    send(new StatusResponse(true, "Registered successfully"));
+                    send(new StatusResponse(true, "Logged in successfully"));
+                } catch (LoginException e) {
+                    LOGGER.error("Login failed", e);
+                    send(new StatusResponse(false, "Login failed due to: %s".formatted(e.getMessage())));
                 }
             }
         }
