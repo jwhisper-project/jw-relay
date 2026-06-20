@@ -187,7 +187,7 @@ public class NetworkServer implements AutoCloseable {
                             case UserPublicKeyRequest request -> processUserPublicKeyRequest(request);
                             case EncryptedMessage message -> routeMessage(message);
                             case LogoutRequest _ -> {
-                                processUnregisterRequest();
+                                processLogoutRequest();
                                 isRunning = false;
                             }
                             default -> throw new NetworkServiceException("Unexpected response: " + response);
@@ -353,12 +353,12 @@ public class NetworkServer implements AutoCloseable {
          * Process incoming user unregister request.
          * @throws IOException if failed to send response
          */
-        private void processUnregisterRequest() throws IOException {
+        private void processLogoutRequest() throws IOException {
             if (userRegistry.logout(socket)) {
                 users.remove(socket);
-                send(new StatusResponse(true, "Unregistered successfully"));
+                send(new StatusResponse(true, "Logged out successfully"));
             } else {
-                send(new StatusResponse(false, "Failed to unregister user"));
+                send(new StatusResponse(false, "Failed to log user out"));
             }
         }
 
