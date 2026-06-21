@@ -23,14 +23,28 @@ import java.security.PublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Optional;
 
+/**
+ * JWhisper web socket handler, i.e. server.
+ * Handles communication with clients.
+ */
 @Component
 @Slf4j
 public class RelayWebSocketHandler extends TextWebSocketHandler {
 
+    /**
+     * Object mapper for JSONs.
+     */
     private final ObjectMapper mapper = new ObjectMapper();
 
+    /**
+     * User registry.
+     */
     private final UserRegistry userRegistry;
 
+    /**
+     * Create a new relay web socket handler.
+     * @param userRegistry user registry
+     */
     public RelayWebSocketHandler(UserRegistry userRegistry) {
         this.userRegistry = userRegistry;
     }
@@ -56,6 +70,12 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
         LogContext.clearContext();
     }
 
+    /**
+     * Handle incoming message from client. Send response if necessary.
+     * @param session client session
+     * @param message incoming message
+     * @throws IOException if failed to send response
+     */
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
         try {
@@ -282,6 +302,12 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
         return username;
     }
 
+    /**
+     * Send message/response to client.
+     * @param session client session
+     * @param whisperMessage message to be sent
+     * @throws IOException if failed to send request
+     */
     private void sendMessage(WebSocketSession session, WhisperMessage whisperMessage) throws IOException {
         LOGGER.info("Sending message");
         session.sendMessage(new TextMessage(mapper.writeValueAsString(whisperMessage)));
