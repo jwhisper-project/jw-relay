@@ -21,12 +21,5 @@ final class Main {
      */
     static void main(String[] args) {
         SpringApplication.run(RelayApplication.class, args);
-
-        try {
-            ServerApp app = new ServerApp();
-            app.start();
-        } catch (Exception e) {
-            LOGGER.error("Unexpected error:", e);
-        }
     }
 }
