@@ -77,7 +77,7 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
                     case LoginRequest request -> processLoginRequest(session, request);
                     case UserPublicKeyRequest request -> processUserPublicKeyRequest(session, request);
                     case EncryptedMessage encryptedMessage -> routeMessage(session, encryptedMessage);
-                    case LogoutRequest _ -> processLogoutRequest(session);
+                    case LogoutRequest request -> processLogoutRequest(session, request);
                     default -> sendMessage(session, new StatusResponse(false, "Unknown whisper message"));
                 }
             } catch (NetworkServiceException e) {
@@ -117,19 +117,20 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
                 request.ownershipSignature()
         );
 
+        String responseId = request.id();
         if (!valid) {
             LOGGER.error("Failed to verify public key. Registration failed.");
-            sendMessage(session, new StatusResponse(false, "Registration failed"));
+            sendMessage(session, new StatusResponse(responseId, false, "Registration failed"));
         } else {
             if (userRegistry.isUsernameTaken(username)) {
-                sendMessage(session, new StatusResponse(false, "Username already taken"));
+                sendMessage(session, new StatusResponse(responseId, false, "Username already taken"));
             } else {
                 try {
                     userRegistry.register(username, publicSigningKey, publicEncryptionKey);
-                    sendMessage(session, new StatusResponse(true, "Registered successfully"));
+                    sendMessage(session, new StatusResponse(responseId, true, "Registered successfully"));
                 } catch (RegistrationException e) {
                     LOGGER.error("Registration failed", e);
-                    sendMessage(session, new StatusResponse(false, "Registration failed due to: %s".formatted(e.getMessage())));
+                    sendMessage(session, new StatusResponse(responseId, false, "Registration failed due to: %s".formatted(e.getMessage())));
                 }
             }
         }
@@ -164,18 +165,18 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
                 request.ownershipSignature()
         );
 
+        String responseId = request.id();
         if (!valid) {
             LOGGER.error("Failed to verify public key. Login failed.");
-            sendMessage(session, new StatusResponse(false, "Login failed"));
+            sendMessage(session, new StatusResponse(responseId, false, "Login failed"));
         } else {
             try {
                 userRegistry.login(session, username);
                 LogContext.setUsername(username);
-                // users.put(socket, this);
-                sendMessage(session, new StatusResponse(true, "Logged in successfully"));
+                sendMessage(session, new StatusResponse(responseId, true, "Logged in successfully"));
             } catch (LoginException e) {
                 LOGGER.error("Login failed", e);
-                sendMessage(session, new StatusResponse(false, "Login failed due to: %s".formatted(e.getMessage())));
+                sendMessage(session, new StatusResponse(responseId, false, "Login failed due to: %s".formatted(e.getMessage())));
             }
         }
     }
@@ -193,17 +194,18 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
         String username = request.targetUsername();
         LOGGER.info("Received user public key request of user {}", username);
 
+        String responseId = request.id();
         Optional<UserPublicKeys> publicKeysOptional = userRegistry.getUserPublicKeys(username);
         if (publicKeysOptional.isPresent()) {
             LOGGER.info("Successfully found public keys of user {}", username);
             UserPublicKeys publicKeys = publicKeysOptional.get();
             sendMessage(session, new UserPublicKeyResponse(
-                    username, publicKeys.signingKey(), publicKeys.encryptionKey(), true
+                    responseId, username, publicKeys.signingKey(), publicKeys.encryptionKey(), true
             ));
         } else {
             LOGGER.error("Failed to find public keys of user {}", username);
             sendMessage(session, new UserPublicKeyResponse(
-                    username, null, null, false
+                    responseId, username, null, null, false
             ));
         }
     }
@@ -247,18 +249,19 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
     /**
      * Process incoming user unregister request.
      * @param session session
+     * @param request incoming request
      * @throws IOException if failed to send response
      * @throws NetworkServiceException if user is not logged-in
      */
-    private void processLogoutRequest(WebSocketSession session) throws IOException, NetworkServiceException {
+    private void processLogoutRequest(WebSocketSession session, LogoutRequest request) throws IOException, NetworkServiceException {
         checkUserIsLoggedIn(session);
 
+        String responseId = request.id();
         if (userRegistry.logout(session)) {
-            // users.remove(socket);
-            sendMessage(session, new StatusResponse(true, "Logged out successfully"));
+            sendMessage(session, new StatusResponse(responseId, true, "Logged out successfully"));
             session.close(CloseStatus.NORMAL);
         } else {
-            sendMessage(session, new StatusResponse(false, "Failed to log user out"));
+            sendMessage(session, new StatusResponse(responseId, false, "Failed to log user out"));
         }
     }
 
