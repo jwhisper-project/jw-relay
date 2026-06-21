@@ -4,6 +4,7 @@ import io.github.artshp.jwhisper.relay.exception.LoginException;
 import io.github.artshp.jwhisper.relay.exception.RegistrationException;
 import io.github.artshp.jwhisper.relay.util.SpringContextBridge;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.socket.WebSocketSession;
 
 import java.net.Socket;
 import java.security.PublicKey;
@@ -26,12 +27,24 @@ public class UserRegistry {
     /**
      * Map of sockets to their usernames.
      */
+    @Deprecated
     private final Map<Socket, String> sockets = new ConcurrentHashMap<>();
 
     /**
      * Map of usernames to their sockets.
      */
+    @Deprecated
     private final Map<String, Socket> socketsReverse = new ConcurrentHashMap<>();
+
+    /**
+     * Map of sessions to their usernames.
+     */
+    private final Map<WebSocketSession, String> sessions = new ConcurrentHashMap<>();
+
+    /**
+     * Map of usernames to their sessions.
+     */
+    private final Map<String, WebSocketSession> sessionsReverse = new ConcurrentHashMap<>();
 
     /**
      * Create a new user registry.
@@ -77,6 +90,7 @@ public class UserRegistry {
      * @param username user's username
      * @throws LoginException if username doesn't exist or user is already logged in.
      */
+    @Deprecated
     public void login(Socket socket, String username) {
         if (!repository.existsByUsername(username)) {
             throw new LoginException("Username %s not found".formatted(username));
@@ -88,6 +102,26 @@ public class UserRegistry {
 
         sockets.put(socket, username);
         socketsReverse.put(username, socket);
+        LOGGER.info("User {} logged in successfully", username);
+    }
+
+    /**
+     * Log in user.
+     * @param session client session
+     * @param username user's username
+     * @throws LoginException if username doesn't exist or user is already logged in.
+     */
+    public void login(WebSocketSession session, String username) {
+        if (!repository.existsByUsername(username)) {
+            throw new LoginException("Username %s not found".formatted(username));
+        }
+
+        if (socketsReverse.containsKey(username)) {
+            throw new LoginException("User %s is already logged in".formatted(username));
+        }
+
+        sessions.put(session, username);
+        sessionsReverse.put(username, session);
         LOGGER.info("User {} logged in successfully", username);
     }
 
@@ -107,10 +141,38 @@ public class UserRegistry {
     /**
      * Get client's socket.
      * @param username target user username
-     * @return socket to target user if registered, otherwise {@code null}
+     * @return socket to target user if logged-in, otherwise {@code null}
      */
+    @Deprecated
     public Socket getSocket(String username) {
         return socketsReverse.get(username);
+    }
+
+    /**
+     * Get client's session.
+     * @param username target user username
+     * @return session to target user if logged-in, otherwise {@code null}
+     */
+    public WebSocketSession getSession(String username) {
+        return sessionsReverse.get(username);
+    }
+
+    /**
+     * Get client's username.
+     * @param session session
+     * @return username if logged-in, otherwise {@code null}
+     */
+    public String getUsername(WebSocketSession session) {
+        return sessions.get(session);
+    }
+
+    /**
+     * Is client logged in?
+     * @param session session
+     * @return {code true} if user is logged-in, otherwise {@code false}
+     */
+    public boolean isLoggedIn(WebSocketSession session) {
+        return sessions.containsKey(session);
     }
 
     /**
@@ -118,11 +180,30 @@ public class UserRegistry {
      * @param socket client socket.
      * @return {@code true} if logged user out successfully, otherwise {@code false}
      */
+    @Deprecated
     public boolean logout(Socket socket) {
         String username = sockets.get(socket);
         if (username != null) {
             sockets.remove(socket);
             socketsReverse.remove(username);
+            LOGGER.info("User {} logged out successfully", username);
+            return true;
+        } else {
+            LOGGER.error("User could not be logged out");
+            return false;
+        }
+    }
+
+    /**
+     * Log out user.
+     * @param session session
+     * @return {@code true} if logged user out successfully, otherwise {@code false}
+     */
+    public boolean logout(WebSocketSession session) {
+        String username = sessions.get(session);
+        if (username != null) {
+            sessions.remove(session);
+            sessionsReverse.remove(username);
             LOGGER.info("User {} logged out successfully", username);
             return true;
         } else {
