@@ -1,5 +1,8 @@
 package io.github.artshp.jwhisper.relay.network;
 
+import io.github.artshp.jwhisper.common.protocol.StatusResponse;
+import io.github.artshp.jwhisper.common.protocol.WhisperMessage;
+import io.github.artshp.jwhisper.relay.log.LogContext;
 import io.github.artshp.jwhisper.relay.storage.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -7,6 +10,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -28,18 +32,49 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
-        LOGGER.info("Low-level TCP channel upgraded to WebSocket. Session ID: {}", session.getId());
+        LogContext.setSessionNumber(session.getId());
+
+        LOGGER.info("Session opened");
+
+        LogContext.clearContext();
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws IOException {
-        LOGGER.info("Received message {}", message.getPayload());
-        session.sendMessage(message); // TODO: replace with real business logic
+        try {
+            LogContext.setSessionNumber(session.getId());
+            LOGGER.info("Received message");
+            String payload = message.getPayload();
+
+            WhisperMessage whisperMessage;
+            try {
+                whisperMessage = mapper.readValue(payload, WhisperMessage.class);
+            } catch (JacksonException e) {
+                LOGGER.error("Failed to parse received message: {}", payload);
+                return;
+            }
+
+            // TODO: replace with real logic
+            switch (whisperMessage) {
+                default -> sendMessage(session, new StatusResponse(false, "Unknown whisper message"));
+            }
+        } finally {
+            LogContext.clearContext();
+        }
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        LogContext.setSessionNumber(session.getId());
+
         activeSessions.values().remove(session);
-        LOGGER.info("Session dropped. Session ID: {}, Close status: {}", session.getId(), status);
+        LOGGER.info("Session closed with status: {}", status);
+
+        LogContext.clearContext();
+    }
+
+    private void sendMessage(WebSocketSession session, WhisperMessage whisperMessage) throws IOException {
+        LOGGER.info("Sending message");
+        session.sendMessage(new TextMessage(mapper.writeValueAsString(whisperMessage)));
     }
 }
