@@ -13,6 +13,7 @@ open module jwhisper.relay {
     requires spring.boot;
     requires spring.boot.autoconfigure;
     requires spring.data.jdbc;
+    requires spring.websocket;
 
     requires jwhisper.common;
 }
