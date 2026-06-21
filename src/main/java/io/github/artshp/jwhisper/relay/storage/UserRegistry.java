@@ -2,8 +2,8 @@ package io.github.artshp.jwhisper.relay.storage;
 
 import io.github.artshp.jwhisper.relay.exception.LoginException;
 import io.github.artshp.jwhisper.relay.exception.RegistrationException;
-import io.github.artshp.jwhisper.relay.util.SpringContextBridge;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.net.Socket;
@@ -16,13 +16,14 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Users registry. Manages currently registered and logged-in users.
  */
+@Component
 @Slf4j
 public class UserRegistry {
 
     /**
      * Users database repository.
      */
-    private final UserRepository repository = SpringContextBridge.getBean(UserRepository.class);
+    private final UserRepository repository;
 
     /**
      * Map of sockets to their usernames.
@@ -49,7 +50,17 @@ public class UserRegistry {
     /**
      * Create a new user registry.
      */
+    @Deprecated
     public UserRegistry() {
+        this.repository = null;
+    }
+
+    /**
+     * Create a new user registry.
+     * @param repository users repository
+     */
+    public UserRegistry(UserRepository repository) {
+        this.repository = repository;
     }
 
     /**
