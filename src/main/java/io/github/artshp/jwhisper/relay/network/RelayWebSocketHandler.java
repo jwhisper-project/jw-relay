@@ -1,6 +1,6 @@
 package io.github.artshp.jwhisper.relay.network;
 
-import io.github.artshp.jwhisper.common.crypto.SecurityUtils;
+import io.github.artshp.jwhisper.common.crypto.PublicKeyUtils;
 import io.github.artshp.jwhisper.common.crypto.SigningUtils;
 import io.github.artshp.jwhisper.common.exception.NetworkServiceException;
 import io.github.artshp.jwhisper.common.protocol.*;
@@ -118,14 +118,14 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
     private void processRegisterRequest(WebSocketSession session, RegisterRequest request) throws NetworkServiceException, IOException {
         PublicKey publicSigningKey;
         try {
-            publicSigningKey = SecurityUtils.newSigningPublicKey(request.publicSigningKey());
+            publicSigningKey = PublicKeyUtils.newSigningPublicKey(request.publicSigningKey());
         } catch (InvalidKeySpecException e) {
             throw new NetworkServiceException("Failed to generate public key.", e);
         }
 
         PublicKey publicEncryptionKey;
         try {
-            publicEncryptionKey = SecurityUtils.newEncryptionPublicKey(request.publicEncryptionKey());
+            publicEncryptionKey = PublicKeyUtils.newEncryptionPublicKey(request.publicEncryptionKey());
         } catch (InvalidKeySpecException e) {
             throw new NetworkServiceException("Failed to generate public key.", e);
         }
@@ -173,7 +173,7 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
         UserPublicKeys publicKeys = publicKeysOptional.get();
         PublicKey publicSigningKey;
         try {
-            publicSigningKey = SecurityUtils.newSigningPublicKey(publicKeys.signingKey());
+            publicSigningKey = PublicKeyUtils.newSigningPublicKey(publicKeys.signingKey());
         } catch (InvalidKeySpecException e) {
             throw new NetworkServiceException("Failed to generate public key.", e);
         }
@@ -243,9 +243,9 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
         String recipient = encryptedMessage.recipient();
         LOGGER.info("Received encrypted message addressed to {}", recipient);
 
-        if (userRegistry.isLoggedIn(session)) {
+        if (userRegistry.isLoggedIn(recipient)) {
             LOGGER.info("Sending message to {}", recipient);
-            WebSocketSession recipientSession = userRegistry.getSession(username);
+            WebSocketSession recipientSession = userRegistry.getSession(recipient);
 
             Optional<UserPublicKeys> publicKeysOptional = userRegistry.getUserPublicKeys(username);
             if (publicKeysOptional.isPresent()) {
@@ -279,7 +279,7 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
         String responseId = request.id();
         if (userRegistry.logout(session)) {
             sendMessage(session, new StatusResponse(responseId, true, "Logged out successfully"));
-            session.close(CloseStatus.NORMAL);
+            session.close(new CloseStatus(CloseStatus.NORMAL.getCode(), "Logged out successfully"));
         } else {
             sendMessage(session, new StatusResponse(responseId, false, "Failed to log user out"));
         }

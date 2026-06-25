@@ -1,5 +1,6 @@
 package io.github.artshp.jwhisper.relay.storage;
 
+import io.github.artshp.jwhisper.common.crypto.PublicKeyUtils;
 import io.github.artshp.jwhisper.relay.exception.LoginException;
 import io.github.artshp.jwhisper.relay.exception.RegistrationException;
 import lombok.extern.slf4j.Slf4j;
@@ -62,8 +63,8 @@ public class UserRegistry {
         try {
             repository.save(new UserEntity(
                     username,
-                    publicSigningKey.getEncoded(),
-                    publicEncryptionKey.getEncoded(),
+                    PublicKeyUtils.toRawBytes(publicSigningKey),
+                    PublicKeyUtils.toRawBytes(publicEncryptionKey),
                     Instant.now())
             );
         } catch (Exception e) {
@@ -128,10 +129,19 @@ public class UserRegistry {
     /**
      * Is client logged in?
      * @param session session
-     * @return {code true} if user is logged-in, otherwise {@code false}
+     * @return {@code true} if user is logged-in, otherwise {@code false}
      */
     public boolean isLoggedIn(WebSocketSession session) {
         return sessions.containsKey(session);
+    }
+
+    /**
+     * Is client logged in?
+     * @param username username
+     * @return {@code true} if user is logged-in, otherwise {@code false}
+     */
+    public boolean isLoggedIn(String username) {
+        return sessionsReverse.containsKey(username);
     }
 
     /**
