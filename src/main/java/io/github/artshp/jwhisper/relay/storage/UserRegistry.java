@@ -129,10 +129,19 @@ public class UserRegistry {
     /**
      * Is client logged in?
      * @param session session
-     * @return {code true} if user is logged-in, otherwise {@code false}
+     * @return {@code true} if user is logged-in, otherwise {@code false}
      */
     public boolean isLoggedIn(WebSocketSession session) {
         return sessions.containsKey(session);
+    }
+
+    /**
+     * Is client logged in?
+     * @param username username
+     * @return {@code true} if user is logged-in, otherwise {@code false}
+     */
+    public boolean isLoggedIn(String username) {
+        return sessionsReverse.containsKey(username);
     }
 
     /**
