@@ -1,5 +1,6 @@
 package io.github.artshp.jwhisper.relay.storage;
 
+import io.github.artshp.jwhisper.common.crypto.PublicKeyUtils;
 import io.github.artshp.jwhisper.relay.exception.LoginException;
 import io.github.artshp.jwhisper.relay.exception.RegistrationException;
 import lombok.extern.slf4j.Slf4j;
@@ -62,8 +63,8 @@ public class UserRegistry {
         try {
             repository.save(new UserEntity(
                     username,
-                    publicSigningKey.getEncoded(),
-                    publicEncryptionKey.getEncoded(),
+                    PublicKeyUtils.toRawBytes(publicSigningKey),
+                    PublicKeyUtils.toRawBytes(publicEncryptionKey),
                     Instant.now())
             );
         } catch (Exception e) {
