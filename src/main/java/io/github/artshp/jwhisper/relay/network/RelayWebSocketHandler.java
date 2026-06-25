@@ -279,7 +279,7 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
         String responseId = request.id();
         if (userRegistry.logout(session)) {
             sendMessage(session, new StatusResponse(responseId, true, "Logged out successfully"));
-            session.close(CloseStatus.NORMAL);
+            session.close(new CloseStatus(CloseStatus.NORMAL.getCode(), "Logged out successfully"));
         } else {
             sendMessage(session, new StatusResponse(responseId, false, "Failed to log user out"));
         }
