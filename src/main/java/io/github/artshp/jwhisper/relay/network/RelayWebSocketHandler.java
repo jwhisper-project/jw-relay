@@ -243,9 +243,9 @@ public class RelayWebSocketHandler extends TextWebSocketHandler {
         String recipient = encryptedMessage.recipient();
         LOGGER.info("Received encrypted message addressed to {}", recipient);
 
-        if (userRegistry.isLoggedIn(session)) {
+        if (userRegistry.isLoggedIn(recipient)) {
             LOGGER.info("Sending message to {}", recipient);
-            WebSocketSession recipientSession = userRegistry.getSession(username);
+            WebSocketSession recipientSession = userRegistry.getSession(recipient);
 
             Optional<UserPublicKeys> publicKeysOptional = userRegistry.getUserPublicKeys(username);
             if (publicKeysOptional.isPresent()) {
