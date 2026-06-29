@@ -26,6 +26,12 @@ public class SpringContextBridge implements ApplicationContextAware {
         return context.getBean(beanClass);
     }
 
+    /**
+     * Create a new spring context bridge.
+     */
+    public SpringContextBridge() {
+    }
+
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
         context = applicationContext;
