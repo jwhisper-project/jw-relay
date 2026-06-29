@@ -18,6 +18,7 @@ final class Main {
 
     /**
      * Relay app entry point.
+     * @param args CLI arguments
      */
     static void main(String[] args) {
         SpringApplication.run(RelayApplication.class, args);
