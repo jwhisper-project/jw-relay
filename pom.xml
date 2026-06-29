@@ -34,6 +34,7 @@
         <h2database.version>2.4.240</h2database.version>
         <spring.jdbc.version>4.1.0</spring.jdbc.version>
         <spring.websocket.version>4.1.0</spring.websocket.version>
+        <spring.version>7.0.8</spring.version>
     </properties>
 
     <build>
@@ -129,6 +130,7 @@
                         <link>https://javadoc.io/doc/tools.jackson.core/jackson-core/${jackson.version}/</link>
                         <link>https://javadoc.io/doc/tools.jackson.core/jackson-databind/${jackson.version}/</link>
                         <link>https://projectlombok.org/api/</link>
+                        <link>https://docs.spring.io/spring-framework/docs/${spring.version}/javadoc-api/</link>
                     </links>
                 </configuration>
             </plugin>
