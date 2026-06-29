@@ -16,12 +16,10 @@
 <h2>Key Structural Pillars</h2>
 <ul>
     <li><strong>io.github.artshp.jwhisper.relay.storage:</strong>
-        Manages data persistence using in-memory hash table. Users need to register after
-        every server's restart.
+        Manages data persistence using H2 users database. Users need to register first and then can log in.
     </li>
     <li><strong>io.github.artshp.jwhisper.relay.network:</strong>
-        Orchestrates active sessions via thread-safe routing tables and implements concurrent
-        Virtual Thread task dispatchers capable of managing thousands of simultaneous node connections cleanly.
+        Orchestrates active sessions via WebSockets capable of managing thousands of simultaneous node connections cleanly.
     </li>
     <li><strong>io.github.artshp.jwhisper.relay.log:</strong>
         Integrates advanced <code>Mapped Diagnostic Context (MDC)</code> trackers paired with a
