@@ -43,6 +43,10 @@ keytool -list -rfc -keystore identity.p12
 Save this certificate string (in PEM format) for future (alternatively as file), the clients will need it.
 Also remember the password you used for key store, you will need it later to start the server.
 
+**Important remark:** it's crucial to provide a correct CN (Common Name) and optionally SANs (Subject Alternative Name)
+to be able to connect to the server from client.
+For example, if it's your local server you can use `localhost` as CN.
+
 ### Before run
 
 Before real run you should provide next values:
